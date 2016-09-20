@@ -16,7 +16,8 @@ define([ "jquery" ], function($) {
     },
     extraClasses: {}, // extend default classes (see lines 38-46)
     fetch: undefined,
-    onItem: undefined
+    onItem: undefined,
+    searchTermHighlight: true
   };
 
   function Autocomplete(args) {
@@ -156,7 +157,7 @@ define([ "jquery" ], function($) {
   Autocomplete.prototype.showResults = function() {
     this.populateResults();
 
-    if (this.results.length > 0) {
+    if (this.results.length > 0 && this.config.searchTermHighlight) {
       // highlight search term
       this.$items.highlight($.trim(this.searchTerm).split(" "), {
         element: "span",
