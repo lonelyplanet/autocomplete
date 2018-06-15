@@ -112,9 +112,9 @@ define([ "jquery" ], function($) {
     this.$el
       .on("keyup click", $.proxy(this.processTyping, this))
       .on("keydown", $.proxy(this.processSpecialKey, this))
-      .on("blur", function(e) {
+      .on("blur", function(event) {
         if (_this.config.forceSelection) {
-          e.target.value != _this.searchTerm && _this.$el.val(_this.searchTerm);
+          event.target.value != _this.searchTerm && _this.$el.val(_this.searchTerm);
           !_this.selected && _this.$el.val("");
         }
         _this.clearResults();
@@ -122,10 +122,10 @@ define([ "jquery" ], function($) {
 
     // 'blur' fires before 'click' so we have to use 'mousedown'
     this.$results
-      .on("mousedown touchend", itemSelector, function(e) {
+      .on("mousedown touchend", itemSelector, function(event) {
         if (!touchmoved) {
-          e.preventDefault();
-          e.stopPropagation();
+          event.preventDefault();
+          event.stopPropagation();
           _this.selectResult();
         }
       })
@@ -257,9 +257,9 @@ define([ "jquery" ], function($) {
     });
   };
 
-  Autocomplete.prototype.getTriggeredValue = function(e) {
-    var referenceIndex = e.target.selectionStart - 1,
-        fullValue = e.target.value,
+  Autocomplete.prototype.getTriggeredValue = function(event) {
+    var referenceIndex = event.target.selectionStart - 1,
+        fullValue = event.target.value,
         lastSpace = fullValue.lastIndexOf(" ", referenceIndex),
         nextSpace = fullValue.indexOf(" ", referenceIndex),
         lastNewline = fullValue.lastIndexOf("\n", referenceIndex),
@@ -281,8 +281,8 @@ define([ "jquery" ], function($) {
     return triggeredValue.charAt(0) == this.config.triggerChar ? triggeredValue : "";
   };
 
-  Autocomplete.prototype.processTyping = function(e) {
-    var currentInputVal = this.config.triggerChar ? this.getTriggeredValue(e) : $.trim(e.target.value);
+  Autocomplete.prototype.processTyping = function(event) {
+    var currentInputVal = this.config.triggerChar ? this.getTriggeredValue(event) : $.trim(event.target.value);
 
     if (this.searchTerm != currentInputVal) {
       this.searchTerm = currentInputVal;
@@ -351,8 +351,8 @@ define([ "jquery" ], function($) {
     return this.resultIndex != tmpIndex;
   };
 
-  Autocomplete.prototype.processSpecialKey = function(e) {
-    var keyName = SPECIAL_KEYS[e.keyCode],
+  Autocomplete.prototype.processSpecialKey = function(event) {
+    var keyName = SPECIAL_KEYS[event.keyCode],
         indexChanged = false,
         anyResultHighlighted = this.resultIndex > -1,
         anyResultsAvailable = !!this.results.length;
@@ -364,7 +364,7 @@ define([ "jquery" ], function($) {
         case "up":
         case "down": {
           if (anyResultsAvailable) {
-            e.preventDefault();
+            event.preventDefault();
             indexChanged = this.changeIndex(keyName);
           }
           break;
@@ -372,7 +372,7 @@ define([ "jquery" ], function($) {
         case "left":
         case "right": {
           if (anyResultHighlighted) {
-            e.preventDefault();
+            event.preventDefault();
             indexChanged = this.changeIndex(keyName == "left" ? "up" : "down");
           }
           break;
@@ -380,13 +380,13 @@ define([ "jquery" ], function($) {
         case "enter":
         case "tab": {
           if (anyResultHighlighted) {
-            e.preventDefault();
+            event.preventDefault();
             this.selectResult();
           }
           break;
         }
         case "esc": {
-          e.preventDefault();
+          event.preventDefault();
           this.config.forceSelection && this.$el.val("");
           this.clearResults();
           break;
