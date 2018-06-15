@@ -87,7 +87,7 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
       it("should set displayed to true showResults().", function() {
         instance.displayd = false;
         instance.showResults();
-        expect(instance.displayed).toBeTruthy();
+        expect(instance.isDisplayed).toBeTruthy();
       });
 
       it("should remove 'visible' class on hideResults().", function() {
@@ -116,7 +116,7 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
       it("should set displayed to false on hide results.", function() {
         instance.showResults();
         instance.hideResults();
-        expect(instance.displayed).toBeFalsy();
+        expect(instance.isDisplayed).toBeFalsy();
       });
 
       it("should set the input's value on selectResult", function() {
@@ -162,7 +162,7 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
           e = $.Event("keydown");
           e.keyCode = 27;
 
-          instance.displayed = true;
+          instance.isDisplayed = true;
           instance.handleSpecialKey(e);
 
           expect(instance.$el.val).toHaveBeenCalledWith("");
@@ -180,7 +180,7 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
         it("shouldn't clear input if item has been previously selected", function() {
           e = $.Event("blur");
           e.relatedTarget = null;
-          instance.selected = true;
+          instance.isSelected = true;
           spyOn(instance.$el, "val");
           instance.$el.trigger(e);
 
@@ -245,7 +245,7 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
 
           e = $.Event("keypress");
           instance.results = [ "a", "b", "c" ];
-          instance.displayed = true;
+          instance.isDisplayed = true;
         });
 
         it("calls .highlightResult() on up/down keypress", function() {
@@ -289,7 +289,7 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
           e.target = { value: "foo" };
           instance.config.forceSelection = true;
           instance.searchTerm = "foom";
-          instance.selected = true;
+          instance.isSelected = true;
 
           instance.$el.trigger(e);
           expect(instance.$el.val).toHaveBeenCalledWith("foom");
