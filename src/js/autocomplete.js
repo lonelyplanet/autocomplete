@@ -92,6 +92,14 @@ define([ "jquery" ], function($) {
     // turn off native browser autocomplete feature unless it's textarea
     !this.$el.is("textarea") && this.$el.attr("autocomplete", "off");
 
+    // bind event handlers
+    this.handleTyping = $.proxy(this.handleTyping, this);
+    this.handleSpecialKey = $.proxy(this.handleSpecialKey, this);
+    this.handleBlur = $.proxy(this.handleBlur, this);
+    this.handleHighlight = $.proxy(this.handleHighlight, this);
+    this.handleSelect = $.proxy(this.handleSelect, this);
+    this.handleTouchMove = $.proxy(this.handleTouchMove, this);
+
     this.init();
   }
 
@@ -105,39 +113,110 @@ define([ "jquery" ], function($) {
   // -------------------------------------------------------------------------
 
   Autocomplete.prototype.listen = function() {
-    var _this = this,
-        touchmoved = false,
-        itemSelector = "." + this.classes.item.replace(/ /g, ".");
+    var itemSelector = "." + this.classes.item.replace(/ /g, ".");
 
     this.$el
-      .on("keyup click", $.proxy(this.processTyping, this))
-      .on("keydown", $.proxy(this.processSpecialKey, this))
-      .on("blur", function(event) {
-        if (_this.config.forceSelection) {
-          event.target.value != _this.searchTerm && _this.$el.val(_this.searchTerm);
-          !_this.selected && _this.$el.val("");
-        }
-        _this.clearResults();
-      });
+      .on("keyup click", this.handleTyping)
+      .on("keydown", this.handleSpecialKey)
+      .on("blur", this.handleBlur);
 
-    // 'blur' fires before 'click' so we have to use 'mousedown'
     this.$results
-      .on("mousedown touchend", itemSelector, function(event) {
-        if (!touchmoved) {
-          event.preventDefault();
-          event.stopPropagation();
-          _this.selectResult();
-        }
-      })
-      .on("mouseenter touchstart", itemSelector, function() {
-        _this.resultIndex = $(this).index();
-        _this.highlightResult();
-        touchmoved = false;
-      })
-      .on("touchmove", itemSelector, function() {
-        touchmoved = true;
-      });
+      .on("mouseenter touchstart", itemSelector, this.handleHighlight)
+      // 'blur' fires before 'click' so we have to use 'mousedown'
+      .on("mousedown touchend", itemSelector, this.handleSelect)
+      .on("touchmove", itemSelector, this.handleTouchMove);
+  };
 
+  // -------------------------------------------------------------------------
+  // Handle events
+  // -------------------------------------------------------------------------
+
+  Autocomplete.prototype.handleTyping = function(event) {
+    var currentInputVal = this.config.triggerChar ? this.getTriggeredValue(event) : $.trim(event.target.value);
+
+    if (this.searchTerm != currentInputVal) {
+      this.searchTerm = currentInputVal;
+      this.selected = false;
+      if (this.searchTerm.length && this.searchTerm.length >= this.config.threshold) {
+        this.debounceSearch();
+      } else {
+        this.clearResults();
+      }
+    }
+  };
+
+  Autocomplete.prototype.handleSpecialKey = function(event) {
+    var keyName = SPECIAL_KEYS[event.keyCode],
+        indexChanged = false,
+        anyResultHighlighted = this.resultIndex > -1,
+        anyResultsAvailable = !!this.results.length;
+
+    clearTimeout(this.typingTimer);
+
+    if (this.displayed) {
+      switch (keyName) {
+        case "up":
+        case "down": {
+          if (anyResultsAvailable) {
+            event.preventDefault();
+            indexChanged = this.changeIndex(keyName);
+          }
+          break;
+        }
+        case "left":
+        case "right": {
+          if (anyResultHighlighted) {
+            event.preventDefault();
+            indexChanged = this.changeIndex(keyName == "left" ? "up" : "down");
+          }
+          break;
+        }
+        case "enter":
+        case "tab": {
+          if (anyResultHighlighted) {
+            event.preventDefault();
+            this.selectResult();
+          }
+          break;
+        }
+        case "esc": {
+          event.preventDefault();
+          this.config.forceSelection && this.$el.val("");
+          this.clearResults();
+          break;
+        }
+      }
+    }
+
+    indexChanged && this.highlightResult();
+  };
+
+  Autocomplete.prototype.handleBlur = function(event) {
+    if (this.config.forceSelection) {
+      event.target.value != this.searchTerm && this.$el.val(this.searchTerm);
+      !this.selected && this.$el.val("");
+    }
+
+    this.clearResults();
+  };
+
+  Autocomplete.prototype.handleHighlight = function(event) {
+    this.resultIndex = $(event.currentTarget).index();
+    this.highlightResult();
+    this.touchmoved = false;
+  };
+
+  Autocomplete.prototype.handleSelect = function(event) {
+    if (this.touchmoved) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.selectResult();
+  };
+
+  Autocomplete.prototype.handleTouchMove = function() {
+    this.touchmoved = true;
   };
 
   // -------------------------------------------------------------------------
@@ -281,20 +360,6 @@ define([ "jquery" ], function($) {
     return triggeredValue.charAt(0) == this.config.triggerChar ? triggeredValue : "";
   };
 
-  Autocomplete.prototype.processTyping = function(event) {
-    var currentInputVal = this.config.triggerChar ? this.getTriggeredValue(event) : $.trim(event.target.value);
-
-    if (this.searchTerm != currentInputVal) {
-      this.searchTerm = currentInputVal;
-      this.selected = false;
-      if (this.searchTerm.length && this.searchTerm.length >= this.config.threshold) {
-        this.debounceSearch();
-      } else {
-        this.clearResults();
-      }
-    }
-  };
-
   Autocomplete.prototype.debounceSearch = function() {
     clearTimeout(this.typingTimer);
     this.typingTimer = setTimeout($.proxy(this.processSearch, this), this.config.debounceTime);
@@ -349,52 +414,6 @@ define([ "jquery" ], function($) {
       }
     }
     return this.resultIndex != tmpIndex;
-  };
-
-  Autocomplete.prototype.processSpecialKey = function(event) {
-    var keyName = SPECIAL_KEYS[event.keyCode],
-        indexChanged = false,
-        anyResultHighlighted = this.resultIndex > -1,
-        anyResultsAvailable = !!this.results.length;
-
-    clearTimeout(this.typingTimer);
-
-    if (this.displayed) {
-      switch (keyName) {
-        case "up":
-        case "down": {
-          if (anyResultsAvailable) {
-            event.preventDefault();
-            indexChanged = this.changeIndex(keyName);
-          }
-          break;
-        }
-        case "left":
-        case "right": {
-          if (anyResultHighlighted) {
-            event.preventDefault();
-            indexChanged = this.changeIndex(keyName == "left" ? "up" : "down");
-          }
-          break;
-        }
-        case "enter":
-        case "tab": {
-          if (anyResultHighlighted) {
-            event.preventDefault();
-            this.selectResult();
-          }
-          break;
-        }
-        case "esc": {
-          event.preventDefault();
-          this.config.forceSelection && this.$el.val("");
-          this.clearResults();
-          break;
-        }
-      }
-    }
-
-    indexChanged && this.highlightResult();
   };
 
   Autocomplete.prototype.defaultFetch = function(searchTerm, callback) {

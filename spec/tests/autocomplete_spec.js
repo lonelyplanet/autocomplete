@@ -163,7 +163,7 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
           e.keyCode = 27;
 
           instance.displayed = true;
-          instance.processSpecialKey(e);
+          instance.handleSpecialKey(e);
 
           expect(instance.$el.val).toHaveBeenCalledWith("");
         });
@@ -202,7 +202,7 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
         spyOn(instance, "debounceSearch");
         instance.config.threshold = 0;
         instance.searchTerm = "o";
-        instance.processTyping({ target: { value: "" } });
+        instance.handleTyping({ target: { value: "" } });
         expect(instance.debounceSearch).not.toHaveBeenCalled();
       });
 
@@ -210,7 +210,7 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
         spyOn(instance, "debounceSearch");
         instance.config.threshold = 2;
         instance.searchTerm = "Oo";
-        instance.processTyping({ target: { value: "O" } });
+        instance.handleTyping({ target: { value: "O" } });
         expect(instance.debounceSearch).not.toHaveBeenCalled();
       });
 
@@ -232,7 +232,7 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
       it("should clear results if the input is empty.", function() {
         spyOn(instance, "clearResults");
         instance.searchTerm = "s";
-        instance.processTyping({ target: { value: "" }});
+        instance.handleTyping({ target: { value: "" }});
         expect(instance.clearResults).toHaveBeenCalled();
       });
 
@@ -250,9 +250,9 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
 
         it("calls .highlightResult() on up/down keypress", function() {
           e.keyCode = 38;
-          instance.processSpecialKey(e);
+          instance.handleSpecialKey(e);
           e.keyCode = 40;
-          instance.processSpecialKey(e);
+          instance.handleSpecialKey(e);
 
           expect(instance.highlightResult).toHaveBeenCalled();
           expect(instance.highlightResult.calls.count()).toEqual(2);
@@ -260,9 +260,9 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
 
         it("doesn't call .highlightResult() on left/right keypress if nothing yet highlighted", function() {
           e.keyCode = 37;
-          instance.processSpecialKey(e);
+          instance.handleSpecialKey(e);
           e.keyCode = 39;
-          instance.processSpecialKey(e);
+          instance.handleSpecialKey(e);
 
           expect(instance.highlightResult).not.toHaveBeenCalled();
         });
@@ -271,9 +271,9 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
           instance.resultIndex = 1;
 
           e.keyCode = 37;
-          instance.processSpecialKey(e);
+          instance.handleSpecialKey(e);
           e.keyCode = 39;
-          instance.processSpecialKey(e);
+          instance.handleSpecialKey(e);
 
           expect(instance.highlightResult).toHaveBeenCalled();
           expect(instance.highlightResult.calls.count()).toEqual(2);
