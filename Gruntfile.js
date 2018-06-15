@@ -18,7 +18,7 @@ module.exports = function(grunt) {
     watch: {
       scripts: {
         files: [ "Gruntfile.js", "src/**/*", "spec/tests/*.js" ],
-        tasks: [ "shell:clearConsole", "lint", "jasmine:amd" ],
+        tasks: [ "shell:clearConsole", "jasmine:amd" ],
         options: {
           nospawn: true
         }
