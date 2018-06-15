@@ -1,8 +1,8 @@
-require([ "jquery", "autocomplete" ], function($, AutoComplete) {
+define([ "jquery", "autocomplete" ], function($, Autocomplete) {
 
   "use strict";
 
-  describe("AutoComplete", function() {
+  describe("Autocomplete", function() {
     var instance, data;
 
     beforeEach(function() {
@@ -12,7 +12,7 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
         { text: "c" }
       ];
       setFixtures("<input id='js-autocomplete-test' />");
-      instance = new AutoComplete({
+      instance = new Autocomplete({
         el: "#js-autocomplete-test",
         forceSelection: false,
         extraClasses: {
@@ -53,7 +53,7 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
 
       it("should't have autocomplete attribute if $el is textarea", function() {
         setFixtures("<textarea class='js-autocomplete'></textarea>");
-        var instanceOnTextarea = new AutoComplete({ el: ".js-autocomplete" });
+        var instanceOnTextarea = new Autocomplete({ el: ".js-autocomplete" });
 
         expect(instanceOnTextarea.$el).not.toHaveAttr("autocomplete");
       });
@@ -217,7 +217,7 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
       it("should add loadingClass & fetch results if searchTerm.length >= threshold and different from previous input value", function() {
         instance.config.threshold = 2;
         spyOn(instance, "callFetch");
-        spyOn(instance.$el, "val").andReturn("f");
+        spyOn(instance.$el, "val").and.returnValue("f");
         instance.processSearch("fr");
         expect(instance.$wrapper).toHaveClass(instance.classes.loading);
         expect(instance.callFetch).toHaveBeenCalled();
@@ -241,7 +241,7 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
 
         beforeEach(function() {
           spyOn(instance, "highlightResult");
-          spyOn(instance, "changeIndex").andReturn(true);
+          spyOn(instance, "changeIndex").and.returnValue(true);
 
           e = $.Event("keypress");
           instance.results = [ "a", "b", "c" ];
@@ -255,7 +255,7 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
           instance.processSpecialKey(e);
 
           expect(instance.highlightResult).toHaveBeenCalled();
-          expect(instance.highlightResult.calls.length).toEqual(2);
+          expect(instance.highlightResult.calls.count()).toEqual(2);
         });
 
         it("doesn't call .highlightResult() on left/right keypress if nothing yet highlighted", function() {
@@ -276,7 +276,7 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
           instance.processSpecialKey(e);
 
           expect(instance.highlightResult).toHaveBeenCalled();
-          expect(instance.highlightResult.calls.length).toEqual(2);
+          expect(instance.highlightResult.calls.count()).toEqual(2);
         });
 
       });
@@ -303,7 +303,7 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
       var e;
 
       beforeEach(function() {
-        instance = new AutoComplete({
+        instance = new Autocomplete({
           el: "#js-autocomplete-test",
           threshold: 1,
           triggerChar: "@",
@@ -370,7 +370,7 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
 
       it("shouldn't change the global result set if nothing returned.", function() {
         instance.results = [ 1 ];
-        spyOn(instance.config, "fetch").andReturn([]);
+        spyOn(instance.config, "fetch").and.returnValue([]);
         instance.callFetch("fra");
         expect(instance.results).toEqual([ 1 ]);
       });

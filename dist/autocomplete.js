@@ -16,7 +16,7 @@ define([ "jquery" ], function($) {
     },
     extraClasses: {}, // extend default classes (see lines 38-46)
     fetch: undefined,
-    onItem: undefined, 
+    onItem: undefined,
     searchTermHighlight: true
   };
 
