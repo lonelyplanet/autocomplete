@@ -9,13 +9,16 @@ module.exports = function(grunt) {
     shell: {
       cleanUp: {
         command: "rm -rfv dist"
+      },
+      clearConsole: {
+        command: "clear"
       }
     },
 
     watch: {
       scripts: {
         files: [ "Gruntfile.js", "src/**/*", "spec/tests/*.js" ],
-        tasks: [ "lint", "jasmine:amd" ],
+        tasks: [ "shell:clearConsole", "lint", "jasmine:amd" ],
         options: {
           nospawn: true
         }
@@ -106,6 +109,7 @@ module.exports = function(grunt) {
   ]);
 
   grunt.registerTask("dev", [
+    "shell:clearConsole",
     "connect",
     "watch"
   ]);
