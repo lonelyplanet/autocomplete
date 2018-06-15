@@ -18,7 +18,7 @@ module.exports = function(grunt) {
     watch: {
       scripts: {
         files: [ "Gruntfile.js", "src/**/*", "spec/tests/*.js" ],
-        tasks: [ "jasmine:amd" ],
+        tasks: [ "lint", "jasmine:amd" ],
         options: {
           nospawn: true
         }
@@ -79,6 +79,20 @@ module.exports = function(grunt) {
         pushTo: "origin master",
         gitDescribeOptions: "--tags" // options to use with "$ git describe"
       }
+    },
+
+    jshint: {
+      src: [ "Gruntfile.js", "src/js/*.js" ],
+      options: {
+        jshintrc: "./.jshintrc"
+      }
+    },
+
+    jscs: {
+      src: [ "Gruntfile.js", "src/js/*.js" ],
+      options: {
+        config: "./.jscs.json"
+      }
     }
 
   });
@@ -87,6 +101,7 @@ module.exports = function(grunt) {
   require("matchdep").filterDev("grunt-*").forEach(grunt.loadNpmTasks);
 
   grunt.registerTask("default", [
+    "lint",
     "shell:cleanUp",
     "copy",
     "connect",
@@ -98,4 +113,10 @@ module.exports = function(grunt) {
     "connect",
     "watch"
   ]);
+
+  grunt.registerTask("lint", [
+    "jscs",
+    "jshint"
+  ]);
+
 };

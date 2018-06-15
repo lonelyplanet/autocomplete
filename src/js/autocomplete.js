@@ -448,10 +448,10 @@ define([ "jquery" ], function($) {
     if (words.constructor === String) {
       words = [ words ];
     }
-    words = $.grep(words, function(word, i) {
+    words = $.grep(words, function(word) {
       return word !== "";
     });
-    words = $.map(words, function(word, i) {
+    words = $.map(words, function(word) {
       return word.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
     });
     if (words.length === 0) { return this; }
