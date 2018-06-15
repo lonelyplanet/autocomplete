@@ -2,7 +2,17 @@ define([ "jquery" ], function($) {
 
   "use strict";
 
-  var defaults = {
+  var SPECIAL_KEYS = {
+    9: "tab",
+    27: "esc",
+    13: "enter",
+    38: "up",
+    40: "down",
+    37: "left",
+    39: "right"
+  },
+
+  defaults = {
     el: ".js-autocomplete",
     threshold: 2,
     limit: 5,
@@ -29,15 +39,6 @@ define([ "jquery" ], function($) {
       selected: false,
       typingTimer: null,
       resultIndex: -1,
-      specialKeys: {
-        9: "tab",
-        27: "esc",
-        13: "enter",
-        38: "up",
-        40: "down",
-        37: "left",
-        39: "right"
-      },
       classes: {
         wrapper:     "autocomplete",
         input:       "autocomplete__input",
@@ -351,7 +352,7 @@ define([ "jquery" ], function($) {
   };
 
   Autocomplete.prototype.processSpecialKey = function(e) {
-    var keyName = this.specialKeys[e.keyCode],
+    var keyName = SPECIAL_KEYS[e.keyCode],
         indexChanged = false,
         anyResultHighlighted = this.resultIndex > -1,
         anyResultsAvailable = !!this.results.length;
