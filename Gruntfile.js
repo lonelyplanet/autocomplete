@@ -9,9 +9,6 @@ module.exports = function(grunt) {
     shell: {
       cleanUp: {
         command: "rm -rfv dist"
-      },
-      killPhantom: {
-        command: "pkill -f phantomjs || true"
       }
     },
 
@@ -106,7 +103,6 @@ module.exports = function(grunt) {
     "copy",
     "connect",
     "jasmine:amd",
-    "shell:killPhantom"
   ]);
 
   grunt.registerTask("dev", [
