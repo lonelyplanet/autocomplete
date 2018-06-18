@@ -24,7 +24,7 @@ define([ "jquery" ], function($) {
       value: "{{text}}", // appended to item as 'data-value' attribute
       empty: "No matches found"
     },
-    extraClasses: {}, // extend default classes (see lines 38-46)
+    extraClasses: {}, // extend default CSS classes
     fetch: undefined,
     onItem: undefined,
     searchTermHighlight: true
