@@ -8,6 +8,9 @@
   },
   "author": "Lonely Planet",
   "license": "GPL-2.0",
+  "scripts": {
+    "precommit": "grunt default"
+  },
   "devDependencies": {
     "grunt": "^0.4.5",
     "grunt-bump": "0.7.0",
@@ -20,6 +23,7 @@
     "grunt-jscs": "^3.0.1",
     "grunt-shell": "^2.1.0",
     "grunt-template-jasmine-requirejs": "^0.2.3",
+    "husky": "^0.14.3",
     "jasmine-jquery": "^2.1.1",
     "matchdep": "^1.0.1"
   }
