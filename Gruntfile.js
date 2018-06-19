@@ -8,7 +8,7 @@ module.exports = function(grunt) {
 
     shell: {
       cleanUp: {
-        command: "rm -rfv dist"
+        command: "rm -rfv dist/*"
       },
       clearConsole: {
         command: "clear"
@@ -102,10 +102,10 @@ module.exports = function(grunt) {
 
   grunt.registerTask("default", [
     "lint",
-    "shell:cleanUp",
-    "copy",
     "connect",
     "jasmine:amd",
+    "shell:cleanUp",
+    "copy",
   ]);
 
   grunt.registerTask("dev", [
