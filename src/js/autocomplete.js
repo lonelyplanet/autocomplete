@@ -27,6 +27,7 @@ define([ "jquery" ], function($) {
     extraClasses: {}, // extend default CSS classes
     fetch: undefined,
     onItem: undefined,
+    onBeforeShow: undefined,
     searchTermHighlight: true
   };
 
@@ -286,6 +287,10 @@ define([ "jquery" ], function($) {
         element: "span",
         className: this.classes.searchTerm
       });
+    }
+
+    if (this.config.onBeforeShow) {
+      this.config.onBeforeShow(this.$wrapper);
     }
 
     this.$wrapper.addClass(this.classes.visible);

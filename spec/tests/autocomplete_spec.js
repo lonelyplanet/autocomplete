@@ -63,7 +63,7 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
       });
 
       it("should add extra class to wrapper.", function() {
-        expect(instance.$wrapper).toHaveClass("ohdeer");
+        expect(instance.$wrapper).toHaveClass("ohdeer", "autocomplete");
       });
 
       it("should have results div.", function() {
@@ -73,19 +73,16 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
     });
 
     describe("The display of results", function() {
-      var el;
 
-      beforeEach(function() {
-        el = instance.$results;
-      });
-
-      it("should show results on showResults().", function() {
+      it("should call populateResults() & add 'visible' class on showResults().", function() {
+        spyOn(instance, "populateResults");
         instance.showResults();
-        expect(el).toBeVisible();
+        expect(instance.populateResults).toHaveBeenCalled();
+        expect(instance.$wrapper).toHaveClass(instance.classes.visible);
       });
 
-      it("should set displayed to true showResults().", function() {
-        instance.displayd = false;
+      it("should set displayed to true on showResults().", function() {
+        instance.areResultsDisplayed = false;
         instance.showResults();
         expect(instance.areResultsDisplayed).toBeTruthy();
       });
@@ -113,7 +110,7 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
         expect(instance.$el).not.toHaveClass(instance.classes.visible);
       });
 
-      it("should set displayed to false on hide results.", function() {
+      it("should set areResultsDisplayed to false on hide results.", function() {
         instance.showResults();
         instance.hideResults();
         expect(instance.areResultsDisplayed).toBeFalsy();
@@ -141,6 +138,13 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
         $disabledItem.trigger("mousedown");
 
         expect(instance.selectResult).not.toHaveBeenCalled();
+      });
+
+      it("should call onBeforeShow() if defined and pass $wrapper", function() {
+        spyOn(instance, "populateResults");
+        instance.config.onBeforeShow = jasmine.createSpy();
+        instance.showResults();
+        expect(instance.config.onBeforeShow).toHaveBeenCalledWith(instance.$wrapper);
       });
 
       describe("with forceSelection enabled", function() {
