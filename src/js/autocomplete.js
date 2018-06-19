@@ -273,9 +273,9 @@ define([ "jquery" ], function($) {
       .wrap(this.templates.$wrapper)
       .after(this.templates.$results.append(this.templates.$list));
 
-    this.$wrapper = this.$el.closest("." + this.classes.wrapper.replace(/ /g, "."));
-    this.$results = $("." + this.classes.results.replace(/ /g, "."), this.$wrapper);
-    this.$list = $("." + this.classes.list.replace(/ /g, "."), this.$wrapper);
+    this.$wrapper = this.$el.parent();
+    this.$results = this.$wrapper.children().last();
+    this.$list = this.$results.children().first();
   };
 
   Autocomplete.prototype.showResults = function() {
