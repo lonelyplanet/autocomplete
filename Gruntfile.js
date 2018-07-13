@@ -6,42 +6,19 @@ module.exports = function(grunt) {
 
     pkg: grunt.file.readJSON("package.json"),
 
-    jasmine: {
-      standard: {
-        src: "src/js/*.js",
-        options: {
-          specs: "spec/tests/*.js",
-          vendor: "bower_components/jquery/dist/jquery.js"
-        }
+    shell: {
+      cleanUp: {
+        command: "rm -rfv dist/*"
       },
-      amd: {
-        src: "src/js/*.js",
-        options: {
-          helpers: [ "node_modules/jasmine-jquery/lib/jasmine-jquery.js", "bower_components/jquery/dist/jquery.js" ],
-          specs: "spec/tests/*.js",
-          host: "http://127.0.0.1:8000",
-          template: require("grunt-template-jasmine-requirejs"),
-          templateOptions: {
-            requireConfig: {
-              baseUrl: "./",
-              paths: {
-                jquery: "./bower_components/jquery/dist/jquery"
-              },
-              shim: {
-                jquery: {
-                  exports: "$"
-                }
-              }
-            }
-          }
-        }
+      clearConsole: {
+        command: "clear"
       }
     },
 
     watch: {
       scripts: {
         files: [ "Gruntfile.js", "src/**/*", "spec/tests/*.js" ],
-        tasks: [ "jasmine:amd" ],
+        tasks: [ "shell:clearConsole", "jasmine:amd" ],
         options: {
           nospawn: true
         }
@@ -49,21 +26,42 @@ module.exports = function(grunt) {
     },
 
     connect: {
-      test: {
-        hostname: "http://127.0.0.1",
-        port: 8000,
-        keepalive: true
+      server: {
+        options: {
+          port: 8000
+        }
       }
     },
 
     copy: {
-      main: {
+      source: {
         expand: true,
         cwd: "src/",
         src: "**/autocomplete*",
         dest: "dist/",
         flatten: true,
         filter: "isFile"
+      },
+    },
+
+    jasmine: {
+      amd: {
+        src: "src/js/*.js",
+        options: {
+          specs: "spec/tests/*.js",
+          helpers: "node_modules/jasmine-jquery/lib/jasmine-jquery.js",
+          vendor: "bower_components/jquery/dist/jquery.js",
+          host: "http://127.0.0.1:8000",
+          template: require("grunt-template-jasmine-requirejs"),
+          templateOptions: {
+            version: "bower_components/requirejs/require.js",
+            requireConfig: {
+              paths: {
+                jquery: "bower_components/jquery/dist/jquery",
+              },
+            }
+          }
+        }
       }
     },
 
@@ -81,6 +79,20 @@ module.exports = function(grunt) {
         pushTo: "origin master",
         gitDescribeOptions: "--tags" // options to use with "$ git describe"
       }
+    },
+
+    jshint: {
+      src: [ "Gruntfile.js", "src/js/*.js" ],
+      options: {
+        jshintrc: "./.jshintrc"
+      }
+    },
+
+    jscs: {
+      src: [ "Gruntfile.js", "src/js/*.js" ],
+      options: {
+        config: "./.jscs.json"
+      }
     }
 
   });
@@ -88,6 +100,23 @@ module.exports = function(grunt) {
   // This loads in all the grunt tasks auto-magically.
   require("matchdep").filterDev("grunt-*").forEach(grunt.loadNpmTasks);
 
-  grunt.registerTask("default", [  "copy", "connect", "jasmine:amd" ]);
-  grunt.registerTask("dev", [ "connect", "watch" ]);
+  grunt.registerTask("default", [
+    "lint",
+    "connect",
+    "jasmine:amd",
+    "shell:cleanUp",
+    "copy",
+  ]);
+
+  grunt.registerTask("dev", [
+    "shell:clearConsole",
+    "connect",
+    "watch"
+  ]);
+
+  grunt.registerTask("lint", [
+    "jscs",
+    "jshint"
+  ]);
+
 };

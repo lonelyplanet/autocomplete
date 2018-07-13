@@ -1,8 +1,8 @@
-require([ "jquery", "autocomplete" ], function($, AutoComplete) {
+define([ "jquery", "autocomplete" ], function($, Autocomplete) {
 
   "use strict";
 
-  describe("AutoComplete", function() {
+  describe("Autocomplete", function() {
     var instance, data;
 
     beforeEach(function() {
@@ -12,7 +12,7 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
         { text: "c" }
       ];
       setFixtures("<input id='js-autocomplete-test' />");
-      instance = new AutoComplete({
+      instance = new Autocomplete({
         el: "#js-autocomplete-test",
         forceSelection: false,
         extraClasses: {
@@ -53,7 +53,7 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
 
       it("should't have autocomplete attribute if $el is textarea", function() {
         setFixtures("<textarea class='js-autocomplete'></textarea>");
-        var instanceOnTextarea = new AutoComplete({ el: ".js-autocomplete" });
+        var instanceOnTextarea = new Autocomplete({ el: ".js-autocomplete" });
 
         expect(instanceOnTextarea.$el).not.toHaveAttr("autocomplete");
       });
@@ -63,7 +63,7 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
       });
 
       it("should add extra class to wrapper.", function() {
-        expect(instance.$wrapper).toHaveClass("ohdeer");
+        expect(instance.$wrapper).toHaveClass("ohdeer", "autocomplete");
       });
 
       it("should have results div.", function() {
@@ -73,21 +73,18 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
     });
 
     describe("The display of results", function() {
-      var el;
 
-      beforeEach(function() {
-        el = instance.$results;
+      it("should call populateResults() & add 'visible' class on showResults().", function() {
+        spyOn(instance, "populateResults");
+        instance.showResults();
+        expect(instance.populateResults).toHaveBeenCalled();
+        expect(instance.$wrapper).toHaveClass(instance.classes.visible);
       });
 
-      it("should show results on showResults().", function() {
+      it("should set displayed to true on showResults().", function() {
+        instance.areResultsDisplayed = false;
         instance.showResults();
-        expect(el).toBeVisible();
-      });
-
-      it("should set displayed to true showResults().", function() {
-        instance.displayd = false;
-        instance.showResults();
-        expect(instance.displayed).toBeTruthy;
+        expect(instance.areResultsDisplayed).toBeTruthy();
       });
 
       it("should remove 'visible' class on hideResults().", function() {
@@ -113,10 +110,10 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
         expect(instance.$el).not.toHaveClass(instance.classes.visible);
       });
 
-      it("should set displayed to false on hide results.", function() {
+      it("should set areResultsDisplayed to false on hide results.", function() {
         instance.showResults();
         instance.hideResults();
-        expect(instance.displayed).toBeFalsy();
+        expect(instance.areResultsDisplayed).toBeFalsy();
       });
 
       it("should set the input's value on selectResult", function() {
@@ -143,6 +140,13 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
         expect(instance.selectResult).not.toHaveBeenCalled();
       });
 
+      it("should call onBeforeShow() if defined and pass $wrapper", function() {
+        spyOn(instance, "populateResults");
+        instance.config.onBeforeShow = jasmine.createSpy();
+        instance.showResults();
+        expect(instance.config.onBeforeShow).toHaveBeenCalledWith(instance.$wrapper);
+      });
+
       describe("with forceSelection enabled", function() {
         var e;
 
@@ -162,8 +166,8 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
           e = $.Event("keydown");
           e.keyCode = 27;
 
-          instance.displayed = true;
-          instance.processSpecialKey(e);
+          instance.areResultsDisplayed = true;
+          instance.handleSpecialKey(e);
 
           expect(instance.$el.val).toHaveBeenCalledWith("");
         });
@@ -180,7 +184,7 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
         it("shouldn't clear input if item has been previously selected", function() {
           e = $.Event("blur");
           e.relatedTarget = null;
-          instance.selected = true;
+          instance.isResultSelected = true;
           spyOn(instance.$el, "val");
           instance.$el.trigger(e);
 
@@ -193,47 +197,64 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
     describe("The user typing", function() {
       var e;
 
+      beforeEach(function() {
+        jasmine.clock().install();
+      });
+
+      afterEach(function() {
+        jasmine.clock().uninstall();
+      });
+
       it("should reset index when searching.", function() {
-        instance.processSearch("test search");
+        instance.search();
         expect(instance.resultIndex).toEqual(-1);
       });
 
       it("should not fetch results if input is blank.", function() {
-        spyOn(instance, "debounceSearch");
+        spyOn(instance, "search");
         instance.config.threshold = 0;
         instance.searchTerm = "o";
-        instance.processTyping({ target: { value: "" } });
-        expect(instance.debounceSearch).not.toHaveBeenCalled();
+        instance.handleTyping({ target: { value: "" } });
+        expect(instance.search).not.toHaveBeenCalled();
       });
 
       it("should not fetch results if input length is less than threshold.", function() {
-        spyOn(instance, "debounceSearch");
+        spyOn(instance, "search");
         instance.config.threshold = 2;
         instance.searchTerm = "Oo";
-        instance.processTyping({ target: { value: "O" } });
-        expect(instance.debounceSearch).not.toHaveBeenCalled();
+        instance.handleTyping({ target: { value: "O" } });
+        expect(instance.search).not.toHaveBeenCalled();
       });
 
       it("should add loadingClass & fetch results if searchTerm.length >= threshold and different from previous input value", function() {
         instance.config.threshold = 2;
-        spyOn(instance, "callFetch");
-        spyOn(instance.$el, "val").andReturn("f");
-        instance.processSearch("fr");
+        spyOn(instance, "fetch");
+        spyOn(instance.$el, "val").and.returnValue("f");
+        instance.search();
         expect(instance.$wrapper).toHaveClass(instance.classes.loading);
-        expect(instance.callFetch).toHaveBeenCalled();
+        jasmine.clock().tick(instance.config.debounceTime + 1);
+        expect(instance.fetch).toHaveBeenCalled();
       });
 
-      it("should remove loadingClass when .callFetch() is called", function() {
-        instance.config.fetch = function(searchTerm, cb) { cb([]); };
-        instance.callFetch();
+      it("should remove loadingClass when fetch is done", function() {
+        instance.handleFetchDone([]);
         expect(instance.$wrapper).not.toHaveClass("is-loading");
       });
 
       it("should clear results if the input is empty.", function() {
         spyOn(instance, "clearResults");
         instance.searchTerm = "s";
-        instance.processTyping({ target: { value: "" }});
+        instance.handleTyping({ target: { value: "" }});
         expect(instance.clearResults).toHaveBeenCalled();
+      });
+
+      it("should call search() on input focus if value is available", function() {
+        spyOn(instance, "search");
+        instance.$el.focus();
+        expect(instance.search).not.toHaveBeenCalled()
+        instance.$el.val("foo");
+        instance.$el.focus();
+        expect(instance.search).toHaveBeenCalled()
       });
 
       describe("Arrows", function() {
@@ -241,42 +262,21 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
 
         beforeEach(function() {
           spyOn(instance, "highlightResult");
-          spyOn(instance, "changeIndex").andReturn(true);
+          spyOn(instance, "changeIndex").and.returnValue(true);
 
           e = $.Event("keypress");
           instance.results = [ "a", "b", "c" ];
-          instance.displayed = true;
+          instance.areResultsDisplayed = true;
         });
 
         it("calls .highlightResult() on up/down keypress", function() {
           e.keyCode = 38;
-          instance.processSpecialKey(e);
+          instance.handleSpecialKey(e);
           e.keyCode = 40;
-          instance.processSpecialKey(e);
+          instance.handleSpecialKey(e);
 
           expect(instance.highlightResult).toHaveBeenCalled();
-          expect(instance.highlightResult.calls.length).toEqual(2);
-        });
-
-        it("doesn't call .highlightResult() on left/right keypress if nothing yet highlighted", function() {
-          e.keyCode = 37;
-          instance.processSpecialKey(e);
-          e.keyCode = 39;
-          instance.processSpecialKey(e);
-
-          expect(instance.highlightResult).not.toHaveBeenCalled();
-        });
-
-        it("calls .highlightResult() on left/right keypress if anything highlighted", function() {
-          instance.resultIndex = 1;
-
-          e.keyCode = 37;
-          instance.processSpecialKey(e);
-          e.keyCode = 39;
-          instance.processSpecialKey(e);
-
-          expect(instance.highlightResult).toHaveBeenCalled();
-          expect(instance.highlightResult.calls.length).toEqual(2);
+          expect(instance.highlightResult.calls.count()).toEqual(2);
         });
 
       });
@@ -289,7 +289,7 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
           e.target = { value: "foo" };
           instance.config.forceSelection = true;
           instance.searchTerm = "foom";
-          instance.selected = true;
+          instance.isResultSelected = true;
 
           instance.$el.trigger(e);
           expect(instance.$el.val).toHaveBeenCalledWith("foom");
@@ -303,7 +303,7 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
       var e;
 
       beforeEach(function() {
-        instance = new AutoComplete({
+        instance = new Autocomplete({
           el: "#js-autocomplete-test",
           threshold: 1,
           triggerChar: "@",
@@ -364,17 +364,6 @@ require([ "jquery", "autocomplete" ], function($, AutoComplete) {
           expect(instance.searchTerm).toEqual("");
         });
       });
-    });
-
-    describe("The fetching of results", function() {
-
-      it("shouldn't change the global result set if nothing returned.", function() {
-        instance.results = [ 1 ];
-        spyOn(instance.config, "fetch").andReturn([]);
-        instance.callFetch("fra");
-        expect(instance.results).toEqual([ 1 ]);
-      });
-
     });
 
     describe("Rendering results", function() {

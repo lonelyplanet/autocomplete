@@ -12,10 +12,10 @@ Clone this repository. Run `npm install` and `bower install`. Then run `grunt de
 * jQuery
 
 ## Usage
-The AutoComplete widget is always instantiated with an html element. This element is expected to be an `input` element, as the user will type and be presented with a set of matched results. Other than the element, you will also want to set a threshold of characters that must be typed before the Autocomplete will start fetching results. By default this is set at 2, but you can override that. You can also limit the number of results displayed in the result list by using the `limit` config option. Search term can be triggered by chosen character (`triggerChar`) - you might want to use it f.e. for user mentions in `textarea` element. If you want to limit input value to fetched results only, use `forceSelection` option. `debounceTime` defines how long (after users stops typing) should AutoComplete wait before it calls `fetch` function.
+The Autocomplete widget is always instantiated with an html element. This element is expected to be an `input` element, as the user will type and be presented with a set of matched results. Other than the element, you will also want to set a threshold of characters that must be typed before the Autocomplete will start fetching results. By default this is set at 2, but you can override that. You can also limit the number of results displayed in the result list by using the `limit` config option. Search term can be triggered by chosen character (`triggerChar`) - you might want to use it f.e. for user mentions in `textarea` element. If you want to limit input value to fetched results only, use `forceSelection` option. `debounceTime` defines how long (after users stops typing) should Autocomplete wait before it calls `fetch` function.
 
 ```js
-new AutoComplete({
+new Autocomplete({
   el: ".js-autocomplete-input",
   threshold: 2,
   limit: 5,
@@ -27,9 +27,9 @@ new AutoComplete({
 ```
 
 # Templating
-You can pass a `templates` config option to the AutoComplete. `item` template is responsible for the results item display (feel free to put some html there). `value` template is rendered as `data-value` attribute in the result item node (see `onItem` function explanation below). `empty` template is rendered when `fetch` returns empty results array.
+You can pass a `templates` config option to the Autocomplete. `item` template is responsible for the results item display (feel free to put some html there). `value` template is rendered as `data-value` attribute in the result item node (see `onItem` function explanation below). `empty` template is rendered when `fetch` returns empty results array.
 ```js
-new AutoComplete({
+new Autocomplete({
   ...
   templates: {
     item: "<strong>{{text}}</strong>",
@@ -41,11 +41,11 @@ new AutoComplete({
 ```
 When creating the `item` / `value` template, variables are surrounded by double curly brackets, like `{{this}}`. No need to escape the html, the script will look through the html string and replace all variables in curly brackets with the values in your data.
 
-Disabled items are supported - all you have to do is add `disabled: true` property to your item data you don't want to be clickable. That item will also be provided with extra class. 
+Disabled items are supported - all you have to do is add `disabled: true` property to your item data you don't want to be clickable. That item will also be provided with extra class.
 
 When fetching starts, `is-loading` class is added to the wrapper element. It's removed as soon as the results appear/fetching stops.
 
-Once `new AutoComplete` is instantiated, it changes the original `<input type="text" />`. It wraps it in an `wrapper` div and appends a `result` div after.
+Once `new Autocomplete` is instantiated, it changes the original `<input type="text" />`. It wraps it in an `wrapper` div and appends a `result` div after.
 
 ```html
 <div class="autocomplete">
@@ -86,7 +86,7 @@ As a user is typing, the widget takes the string of typed text and passes it to 
 
 **Local Example:**
 ```js
-new AutoComplete({
+new Autocomplete({
   ...
   fetch: myFetch,
   ...
@@ -108,7 +108,7 @@ var myFetch = function(searchTerm, callback) {
 
 **XHR Example:**
 ```js
-new AutoComplete({
+new Autocomplete({
   ...
   fetch: myFetch,
   ...
@@ -131,7 +131,7 @@ This function is passed the DOM element (not the jQuery element, the actual DOM 
 
 **Example:**
 ```js
-new AutoComplete({
+new Autocomplete({
   ...
   onItem: myOnItem,
   ...
