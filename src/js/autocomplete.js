@@ -28,7 +28,8 @@ define([ "jquery" ], function($) {
     fetch: undefined,
     onItem: undefined,
     onBeforeShow: undefined,
-    searchTermHighlight: true
+    searchTermHighlight: true,
+    useHorizontalNavKeys: false
   };
 
   function Autocomplete(args) {
@@ -37,7 +38,7 @@ define([ "jquery" ], function($) {
       results: [],
       searchTerm: "",
       typingTimer: null,
-      resultIndex: -1,
+      itemIndex: -1,
       isResultSelected: false,
       areResultsDisplayed: false,
       classes: {
@@ -98,18 +99,18 @@ define([ "jquery" ], function($) {
     };
 
     this.$el = $(this.config.el);
+    this.$list = $();
+    this.$items = $();
 
     // turn off native browser autocomplete feature unless it's textarea
     !this.$el.is("textarea") && this.$el.attr("autocomplete", "off");
 
     // bind event handlers
-    this.handleTyping = $.proxy(this.handleTyping, this);
-    this.handleSpecialKey = $.proxy(this.handleSpecialKey, this);
+    this.handleInput = $.proxy(this.handleInput, this);
     this.handleBlur = $.proxy(this.handleBlur, this);
-    this.handleFocus = $.proxy(this.handleFocus, this);
-    this.handleHighlight = $.proxy(this.handleHighlight, this);
-    this.handleSelect = $.proxy(this.handleSelect, this);
-    this.handleTouchMove = $.proxy(this.handleTouchMove, this);
+    this.handleItemHover = $.proxy(this.handleItemHover, this);
+    this.handleItemClick = $.proxy(this.handleItemClick, this);
+    this.handleItemTouchMove = $.proxy(this.handleItemTouchMove, this);
     this.handleFetchDone = $.proxy(this.handleFetchDone, this);
 
     this.fetch = $.proxy(this.fetch, this);
@@ -130,130 +131,76 @@ define([ "jquery" ], function($) {
     var itemSelector = "." + this.classes.item.replace(/ /g, ".");
 
     this.$el
-      .on("keyup click", this.handleTyping)
-      .on("keydown", this.handleSpecialKey)
-      .on("blur", this.handleBlur)
-      .on("focus", this.handleFocus);
+      .on("keyup keydown click focus", this.handleInput)
+      .on("blur", this.handleBlur);
 
     this.$results
-      .on("mouseenter touchstart", itemSelector, this.handleHighlight)
+      .on("mouseenter touchstart", itemSelector, this.handleItemHover)
       // 'blur' fires before 'click' so we have to use 'mousedown'
-      .on("mousedown touchend", itemSelector, this.handleSelect)
-      .on("touchmove", itemSelector, this.handleTouchMove);
+      .on("mousedown touchend", itemSelector, this.handleItemClick)
+      .on("touchmove", itemSelector, this.handleItemTouchMove);
   };
 
   // -------------------------------------------------------------------------
   // Handle events
   // -------------------------------------------------------------------------
 
-  Autocomplete.prototype.handleTyping = function(event) {
-    var value = event.target.value,
-        isTriggered = !!this.config.triggerChar,
-        nextSearchTerm = isTriggered ? this.getTriggeredValue(event) : value;
-
-    if (this.searchTerm != nextSearchTerm) {
-      this.searchTerm = nextSearchTerm;
-      this.isResultSelected = false;
-      if (this.searchTerm.length && this.searchTerm.length >= this.config.threshold) {
-        this.search();
-      } else {
-        this.clearResults();
+  Autocomplete.prototype.handleInput = function(event) {
+    if (event.type === "keydown") {
+      if (SPECIAL_KEYS[event.keyCode] != undefined) {
+        this.shouldProcessTyping = false;
+        this.processSpecialKey(event);
       }
-    }
-  };
-
-  Autocomplete.prototype.handleSpecialKey = function(event) {
-    var keyName = SPECIAL_KEYS[event.keyCode],
-        hasResultIndexChanged = false,
-        isResultHighlighted = this.resultIndex > -1,
-        isResultAvailable = !!this.results.length;
-
-    clearTimeout(this.typingTimer);
-
-    if (this.areResultsDisplayed) {
-      switch (keyName) {
-        case "up":
-        case "down": {
-          if (isResultAvailable) {
-            event.preventDefault();
-            hasResultIndexChanged = this.changeIndex(keyName);
-          }
-          break;
-        }
-        case "left":
-        case "right": {
-          if (isResultHighlighted) {
-            event.preventDefault();
-            hasResultIndexChanged = this.changeIndex(keyName == "left" ? "up" : "down");
-          }
-          break;
-        }
-        case "enter":
-        case "tab": {
-          if (isResultHighlighted) {
-            event.preventDefault();
-            this.selectResult();
-            this.hideResults();
-          }
-          break;
-        }
-        case "esc": {
-          event.preventDefault();
-          this.config.forceSelection && this.$el.val("");
-          this.clearResults();
-          break;
-        }
-      }
+    } else if (event.type === "keyup" && this.shouldProcessTyping) {
+      this.processTyping(event);
+    } else {
+      this.shouldProcessTyping = true;
     }
 
-    hasResultIndexChanged && this.highlightResult();
+    if (
+      (event.type === "focus") ||
+      (event.type === "click" && this.lastInputEvent != "focus")
+    ) {
+      this.processTyping(event);
+    }
+
+    this.lastInputEvent = event.type;
   };
 
-  Autocomplete.prototype.handleBlur = function(event) {
-    if (this.config.forceSelection) {
-      if (event.target.value != this.searchTerm) {
-        this.$el.val(this.searchTerm);
-      }
-      if (!this.isResultSelected) {
-        this.$el.val("");
-      }
+  Autocomplete.prototype.handleBlur = function() {
+    if (this.config.forceSelection && !this.isResultSelected) {
+      this.$el.val("");
     }
 
     this.hideResults();
   };
 
-  Autocomplete.prototype.handleFocus = function() {
-    this.$el.val().length && this.search();
-  };
-
-  Autocomplete.prototype.handleHighlight = function(event) {
-    this.resultIndex = $(event.currentTarget).index();
+  Autocomplete.prototype.handleItemHover = function(event) {
+    this.itemIndex = $(event.currentTarget).index();
     this.highlightResult();
     this.hasTouchmoved = false;
   };
 
-  Autocomplete.prototype.handleSelect = function(event) {
+  Autocomplete.prototype.handleItemClick = function(event) {
     if (this.hasTouchmoved) return;
 
     event.preventDefault();
     event.stopPropagation();
 
     this.selectResult();
-    this.clearResults();
+    this.hideResults();
   };
 
-  Autocomplete.prototype.handleTouchMove = function() {
+  Autocomplete.prototype.handleItemTouchMove = function() {
     this.hasTouchmoved = true;
   };
 
-  Autocomplete.prototype.handleFetchDone = function(results) {
-    var limit = this.config.limit,
-        hasEmptyTemplate = !!this.config.templates.empty;
+  Autocomplete.prototype.handleFetchDone = function(data) {
+    if (!!data && data.constructor === Array) {
+      var limit = this.config.limit,
+          results = limit > 0 ? data.slice(0, limit) : data;
 
-    if (!!results) {
-      this.results = limit > 0 ? results.slice(0, limit) : results;
-
-      if ((hasEmptyTemplate || results.length > 0) && this.$el.is(":focus")) {
+      if (this.populateResults(results)) {
         this.showResults();
       } else {
         this.clearResults();
@@ -278,16 +225,72 @@ define([ "jquery" ], function($) {
     this.$list = this.$results.children().first();
   };
 
-  Autocomplete.prototype.showResults = function() {
-    this.populateResults();
+  Autocomplete.prototype.processTyping = function(event) {
+    var value = event.target.value,
+        isTermTriggered = !!this.config.triggerChar,
+        searchTerm = isTermTriggered ? this.getTriggeredValue(event) : value;
 
-    if (this.results.length > 0 && this.config.searchTermHighlight) {
-      // highlight search term
-      this.$items.highlight($.trim(this.searchTerm).split(" "), {
-        element: "span",
-        className: this.classes.searchTerm
-      });
+    this.search(searchTerm);
+  };
+
+  Autocomplete.prototype.processSpecialKey = function(event) {
+    var keyName = SPECIAL_KEYS[event.keyCode],
+        hasItemIndexChanged = false,
+        canChangeItemIndex = !!this.$items.length && this.areResultsDisplayed,
+        isNavigating = this.itemIndex > -1 && this.areResultsDisplayed,
+        isTermTriggered = !!this.config.triggerChar;
+
+    switch (keyName) {
+      case "up":
+      case "down": {
+        if (canChangeItemIndex) {
+          hasItemIndexChanged = this.changeIndex(keyName);
+          event.preventDefault();
+        }
+        break;
+      }
+      case "left":
+      case "right": {
+        if (this.config.useHorizontalNavKeys && isNavigating) {
+          hasItemIndexChanged = this.changeIndex(
+            keyName == "left" ? "up" : "down"
+          );
+          event.preventDefault();
+        } else if (isTermTriggered) {
+          this.shouldProcessTyping = true;
+        }
+        break;
+      }
+      case "enter":
+      case "tab": {
+        if (isNavigating) {
+          this.selectResult();
+          this.hideResults();
+          event.preventDefault();
+        }
+        break;
+      }
+      case "esc": {
+        if (this.areResultsDisplayed) {
+          if (this.config.forceSelection) {
+            this.$el.val("");
+            this.clearResults();
+          } else {
+            this.hideResults();
+          }
+          event.preventDefault();
+        }
+        break;
+      }
     }
+
+    if (hasItemIndexChanged) this.highlightResult();
+  };
+
+  Autocomplete.prototype.showResults = function() {
+    if (this.areResultsDisplayed) return;
+
+    this.resetHighlightedResult();
 
     if (this.config.onBeforeShow) {
       this.config.onBeforeShow(this.$wrapper);
@@ -295,12 +298,6 @@ define([ "jquery" ], function($) {
 
     this.$wrapper.addClass(this.classes.visible);
     this.areResultsDisplayed = true;
-    this.resultIndex = -1;
-
-    // highlight first item if forceSelection
-    if (this.config.forceSelection) {
-      this.changeIndex("down") && this.highlightResult();
-    }
   };
 
   Autocomplete.prototype.hideResults = function() {
@@ -308,49 +305,82 @@ define([ "jquery" ], function($) {
     this.areResultsDisplayed = false;
   };
 
-  Autocomplete.prototype.populateResults = function() {
-    this.processTemplate();
-    this.$list.html(this.$items);
-  };
-
   Autocomplete.prototype.clearResults = function() {
-    this.results = [];
-    this.$list.html(null);
-    this.resultIndex = -1;
     this.hideResults();
+    this.$list.empty();
   };
 
   Autocomplete.prototype.highlightResult = function() {
-    var $currentItem = this.$items.eq(this.resultIndex);
+    var $currentItem = this.$items.eq(this.itemIndex);
+
     // unless disabled, highlight result by adding class
-    this.$items.removeClass(this.classes.highlighted);
+    this.unhighlightResults();
     if (!$currentItem.hasClass(this.classes.disabled)) {
       $currentItem.addClass(this.classes.highlighted);
     }
   };
 
-  Autocomplete.prototype.selectResult = function() {
-    var $item = this.$items.eq(this.resultIndex);
+  Autocomplete.prototype.unhighlightResults = function() {
+    this.$items.removeClass(this.classes.highlighted);
+  };
 
-    if (!$item.hasClass(this.classes.disabled)) {
-      this.isResultSelected = true;
-      this.config.onItem($item); // pass actual DOM element to onItem()
+  Autocomplete.prototype.resetHighlightedResult = function() {
+    this.resetIndex();
+    this.unhighlightResults();
+
+    // highlight first item if forceSelection
+    if (this.config.forceSelection) {
+      this.changeIndex("down") && this.highlightResult();
+    }
+  };
+
+  Autocomplete.prototype.selectResult = function() {
+    var $item = this.$items.eq(this.itemIndex);
+
+    if ($item.hasClass(this.classes.disabled)) return;
+
+    this.config.onItem($item);
+    this.isResultSelected = true;
+
+    // Update searchTerm to match new input value unless triggered
+    if (!this.config.triggerChar) {
       this.searchTerm = this.$el.val();
     }
   };
 
-  Autocomplete.prototype.processTemplate = function() {
-    var len = this.results.length;
+  Autocomplete.prototype.populateResults = function(results) {
+    var resultsLength = results.length,
+        $items = $();
 
-    this.$items = $();
-
-    if (!len && !!this.config.templates.empty) {
-      $.merge(this.$items, this.templates.$empty.html(this.config.templates.empty));
-    } else {
-      for (var i = 0; i < len; i++) {
-        $.merge(this.$items, this.renderTemplate(this.templates.$item, this.results[i]));
+    if (resultsLength > 0) {
+      for (var i = 0; i < resultsLength; i++) {
+        $.merge(
+          $items,
+          this.renderTemplate(this.templates.$item, results[i])
+        );
       }
+
+      if (this.config.searchTermHighlight) {
+        $items.highlight(
+          $.trim(this.searchTerm).split(" "),
+          {
+            element: "span",
+            className: this.classes.searchTerm
+          }
+        );
+      }
+    } else if (this.config.templates.empty) {
+      $.merge(
+        $items,
+        this.templates.$empty.html(this.config.templates.empty)
+      );
     }
+
+    this.$list.html($items);
+    this.$items = $items;
+    this.resetHighlightedResult();
+
+    return !!$items.length;
   };
 
   Autocomplete.prototype.renderTemplate = function($item, obj) {
@@ -361,14 +391,19 @@ define([ "jquery" ], function($) {
     }
 
     $item = $(template);
-    obj.disabled && obj.disabled === true && $item.addClass(this.classes.disabled);
+
+    if (obj.disabled && obj.disabled === true) {
+      $item.addClass(this.classes.disabled);
+    }
 
     return $item;
   };
 
   Autocomplete.prototype.getTriggeredValue = function(event) {
-    var referenceIndex = event.target.selectionStart - 1,
-        fullValue = event.target.value,
+    var triggerChar = this.config.triggerChar,
+        input = event.target,
+        referenceIndex = input.selectionStart - 1,
+        fullValue = input.value,
         lastSpace = fullValue.lastIndexOf(" ", referenceIndex),
         nextSpace = fullValue.indexOf(" ", referenceIndex),
         lastNewline = fullValue.lastIndexOf("\n", referenceIndex),
@@ -387,46 +422,70 @@ define([ "jquery" ], function($) {
 
     triggeredValue = fullValue.substring(startIndex + 1, endIndex);
 
-    return triggeredValue.charAt(0) == this.config.triggerChar ? triggeredValue : "";
+    return triggeredValue.charAt(0) === triggerChar ? triggeredValue : "";
   };
 
-  Autocomplete.prototype.search = function() {
-    var debounceTime = this.config.debounceTime;
-
-    this.$wrapper.addClass(this.classes.loading);
+  Autocomplete.prototype.search = function(searchTerm) {
+    var debounceTime = this.config.debounceTime,
+        fetchBound = function() { this.fetch(searchTerm); }.bind(this);
 
     if (debounceTime) {
       clearTimeout(this.typingTimer);
-      this.typingTimer = setTimeout(this.fetch, debounceTime);
+      this.typingTimer = setTimeout(fetchBound, debounceTime);
     } else {
-      this.fetch();
+      fetchBound();
     }
   };
 
-  Autocomplete.prototype.fetch = function() {
-    this.config.fetch(this.searchTerm, this.handleFetchDone);
+  Autocomplete.prototype.fetch = function(searchTerm) {
+    if (
+      searchTerm.length &&
+      searchTerm.length >= this.config.threshold
+    ) {
+      if (this.searchTerm != searchTerm) {
+        this.searchTerm = searchTerm;
+        this.isResultSelected = false;
+
+        this.$wrapper.addClass(this.classes.loading);
+        this.config.fetch(this.searchTerm, this.handleFetchDone);
+      } else {
+        this.showResults();
+      }
+    } else {
+      this.hideResults();
+    }
+  };
+
+  Autocomplete.prototype.resetIndex = function() {
+    this.itemIndex = -1;
   };
 
   Autocomplete.prototype.increaseIndex = function() {
-    this.resultIndex++;
-    this.resultIndex == this.results.length && (this.resultIndex = 0);
+    this.itemIndex++;
+
+    if (this.itemIndex == this.$items.length) {
+      this.itemIndex = 0;
+    }
   };
 
   Autocomplete.prototype.decreaseIndex = function() {
-    this.resultIndex <= 0 && (this.resultIndex = this.results.length);
-    this.resultIndex--;
+    if (this.itemIndex <= 0) {
+      this.itemIndex = this.$items.length;
+    }
+
+    this.itemIndex--;
   };
 
   Autocomplete.prototype.changeIndex = function(direction) {
-    var resultsLength = this.results.length,
-        tmpIndex = this.resultIndex,
+    var itemsLength = this.$items.length,
+        tmpIndex = this.itemIndex,
         i = 0;
 
-    if (resultsLength && !this.isEveryItemDisabled()) {
+    if (itemsLength && !this.isEveryItemDisabled()) {
       switch (direction) {
         case "up": {
           this.decreaseIndex();
-          while (this.isCurrentItemDisabled() && i < resultsLength) {
+          while (this.isCurrentItemDisabled() && i < itemsLength) {
             this.decreaseIndex();
             i++;
           }
@@ -434,7 +493,7 @@ define([ "jquery" ], function($) {
         }
         case "down": {
           this.increaseIndex();
-          while (this.isCurrentItemDisabled() && i < resultsLength) {
+          while (this.isCurrentItemDisabled() && i < itemsLength) {
             this.increaseIndex();
             i++;
           }
@@ -442,11 +501,12 @@ define([ "jquery" ], function($) {
         }
       }
     }
-    return this.resultIndex != tmpIndex;
+
+    return this.itemIndex != tmpIndex;
   };
 
   Autocomplete.prototype.isCurrentItemDisabled = function() {
-    return this.$items.eq(this.resultIndex).hasClass(this.classes.disabled);
+    return this.$items.eq(this.itemIndex).hasClass(this.classes.disabled);
   };
 
   Autocomplete.prototype.isEveryItemDisabled = function() {
