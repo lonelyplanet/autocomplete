@@ -156,15 +156,6 @@ define([ "jquery" ], function($) {
     } else {
       this.shouldProcessTyping = true;
     }
-
-    if (
-      (event.type === "focus") ||
-      (event.type === "click" && this.lastInputEvent != "focus")
-    ) {
-      this.processTyping(event);
-    }
-
-    this.lastInputEvent = event.type;
   };
 
   Autocomplete.prototype.handleBlur = function() {
@@ -237,13 +228,14 @@ define([ "jquery" ], function($) {
     var keyName = SPECIAL_KEYS[event.keyCode],
         hasItemIndexChanged = false,
         canChangeItemIndex = !!this.$items.length && this.areResultsDisplayed,
-        isNavigating = this.itemIndex > -1 && this.areResultsDisplayed,
-        isTermTriggered = !!this.config.triggerChar;
+        isNavigating = this.itemIndex > -1 && this.areResultsDisplayed;
 
     switch (keyName) {
       case "up":
-      case "down": {
+      case "down":
+      case "tab": {
         if (canChangeItemIndex) {
+          keyName = keyName === "tab" ? "down" : keyName;
           hasItemIndexChanged = this.changeIndex(keyName);
           event.preventDefault();
         }
@@ -256,13 +248,10 @@ define([ "jquery" ], function($) {
             keyName == "left" ? "up" : "down"
           );
           event.preventDefault();
-        } else if (isTermTriggered) {
-          this.shouldProcessTyping = true;
         }
         break;
       }
-      case "enter":
-      case "tab": {
+      case "enter": {
         if (isNavigating) {
           this.selectResult();
           this.hideResults();
@@ -272,7 +261,7 @@ define([ "jquery" ], function($) {
       }
       case "esc": {
         if (this.areResultsDisplayed) {
-          if (this.config.forceSelection) {
+          if (this.config.forceSelection && !this.isResultSelected) {
             this.$el.val("");
             this.clearResults();
           } else {
@@ -308,6 +297,7 @@ define([ "jquery" ], function($) {
   Autocomplete.prototype.clearResults = function() {
     this.hideResults();
     this.$list.empty();
+    this.searchTerm = "";
   };
 
   Autocomplete.prototype.highlightResult = function() {
@@ -402,8 +392,11 @@ define([ "jquery" ], function($) {
   Autocomplete.prototype.getTriggeredValue = function(event) {
     var triggerChar = this.config.triggerChar,
         input = event.target,
-        referenceIndex = input.selectionStart - 1,
-        fullValue = input.value,
+        referenceIndex = input.selectionStart - 1;
+
+    if (referenceIndex === -1) return "";
+
+    var fullValue = input.value,
         lastSpace = fullValue.lastIndexOf(" ", referenceIndex),
         nextSpace = fullValue.indexOf(" ", referenceIndex),
         lastNewline = fullValue.lastIndexOf("\n", referenceIndex),
@@ -448,7 +441,7 @@ define([ "jquery" ], function($) {
 
         this.$wrapper.addClass(this.classes.loading);
         this.config.fetch(this.searchTerm, this.handleFetchDone);
-      } else {
+      } else if (this.$items.length) {
         this.showResults();
       }
     } else {
