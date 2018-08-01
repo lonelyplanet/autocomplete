@@ -74,77 +74,184 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
 
     describe("The display of results", function() {
 
-      it("should call populateResults() & add 'visible' class on showResults().", function() {
-        spyOn(instance, "populateResults");
-        instance.showResults();
-        expect(instance.populateResults).toHaveBeenCalled();
-        expect(instance.$wrapper).toHaveClass(instance.classes.visible);
+      describe("Render", function() {
+
+        it("should render items from template", function() {
+          instance.populateResults([
+            { text: "howdy" },
+            { text: "boss", disabled: true }
+          ]);
+
+          expect(instance.$list.html()).not.toHaveLength(0);
+          expect(instance.$items.eq(0)).toHaveText("howdy");
+          expect(instance.$items.eq(1)).toHaveText("boss");
+          expect(instance.$items.eq(0)).toHaveClass(instance.classes.item);
+          expect(instance.$items.eq(1)).toHaveClass(instance.classes.disabled);
+        });
+
+        it("should render empty template if defined & results empty", function() {
+          instance.config.templates.empty = "No matches found";
+          instance.populateResults([]);
+
+          expect(instance.$items).toHaveLength(1);
+          expect(instance.$items).toHaveText("No matches found");
+          expect(instance.$items).toHaveClass(instance.classes.empty);
+        });
+
+        it("should highlight first result if forceSelection is enabled", function() {
+          instance.config.forceSelection = true;
+          instance.populateResults([ { text: "howdy" } ]);
+
+          expect(instance.$items.eq(0)).toHaveClass(instance.classes.highlighted);
+        });
       });
 
-      it("should set displayed to true on showResults().", function() {
-        instance.areResultsDisplayed = false;
-        instance.showResults();
-        expect(instance.areResultsDisplayed).toBeTruthy();
+      describe("Show", function() {
+
+        beforeEach(function() {
+          spyOn(instance, "resetHighlightedResult").and.callThrough();
+        });
+
+        it("should early return if results are already displayed", function() {
+          instance.areResultsDisplayed = true;
+          instance.showResults();
+
+          expect(instance.resetHighlightedResult).not.toHaveBeenCalled();
+        });
+
+        it("should highlight first result if forceSelection is enabled", function() {
+          instance.config.forceSelection = true;
+          instance.populateResults([ { text: "howdy" } ]);
+          instance.hideResults();
+          instance.showResults();
+
+          expect(instance.$items.eq(0)).toHaveClass(instance.classes.highlighted);
+        });
+
+        it("should call config.onBeforeShow() if defined", function() {
+          instance.config.onBeforeShow = function() {};
+          spyOn(instance.config, "onBeforeShow");
+          instance.showResults();
+
+          expect(instance.config.onBeforeShow).toHaveBeenCalled();
+        });
+
+        it("should add 'visible' class", function() {
+          instance.showResults();
+
+          expect(instance.$wrapper).toHaveClass(instance.classes.visible);
+        });
+
+        it("should set 'displayed' flag to true", function() {
+          instance.areResultsDisplayed = false;
+          instance.showResults();
+
+          expect(instance.areResultsDisplayed).toBe(true);
+        });
+
       });
 
-      it("should remove 'visible' class on hideResults().", function() {
-        instance.hideResults();
-        expect(instance.$el).not.toHaveClass(instance.classes.visible);
+      describe("Hide", function() {
+
+        beforeEach(function() {
+          instance.showResults();
+        });
+
+        it("should remove 'visible' class", function() {
+          instance.hideResults();
+
+          expect(instance.$wrapper).not.toHaveClass(instance.classes.visible);
+        });
+
+        it("should set 'displayed' flag to false", function() {
+          instance.hideResults();
+
+          expect(instance.areResultsDisplayed).toBe(false);
+        });
+
       });
 
-      it("should clear all html on clearResults.", function() {
-        instance.$list.html("<li>content</li>");
-        instance.clearResults();
-        expect(instance.$list).toBeEmpty();
+      describe("Clear", function() {
+
+        beforeEach(function() {
+          instance.$list.html("<li>some result</li>");
+        });
+
+        it("should empty $list html", function() {
+          instance.clearResults();
+
+          expect(instance.$list).toBeEmpty();
+        });
+
+        it("should call hideResults()", function() {
+          spyOn(instance, "hideResults");
+          instance.clearResults();
+
+          expect(instance.hideResults).toHaveBeenCalled();
+        });
+
       });
 
-      it("should clear the global results array on clearResults.", function() {
-        instance.results = [ 1, 2, 3 ];
-        instance.clearResults();
-        expect(instance.results).toEqual([]);
+      describe("Highlight", function() {
+
+        beforeEach(function() {
+          instance.populateResults([
+            { text: "result 1", disabled: true },
+            { text: "result 2" }
+          ]);
+        });
+
+        it("should add 'highlighted' class", function() {
+          instance.itemIndex = 0;
+          instance.highlightResult();
+          expect(instance.$items.eq(0)).not.toHaveClass(instance.classes.highlighted);
+        });
+
+        it("shouldn't add 'highlighted' class if item is disabled", function() {
+          instance.itemIndex = 1;
+          instance.highlightResult();
+          expect(instance.$items.eq(1)).toHaveClass(instance.classes.highlighted);
+        });
+
       });
 
-      it("should hide results panel on clearResults.", function() {
-        instance.showResults();
-        instance.clearResults();
-        expect(instance.$el).not.toHaveClass(instance.classes.visible);
-      });
+      describe("Select", function() {
 
-      it("should set areResultsDisplayed to false on hide results.", function() {
-        instance.showResults();
-        instance.hideResults();
-        expect(instance.areResultsDisplayed).toBeFalsy();
-      });
+        beforeEach(function() {
 
-      it("should set the input's value on selectResult", function() {
-        instance.results = [ { text: "robisaduck" } ];
-        instance.showResults();
-        instance.resultIndex = 0;
-        instance.selectResult();
-        expect($(instance.config.el).val()).toEqual("robisaduck");
-      });
+          instance.populateResults([
+            { text: "robisaduck" },
+            { text: "duckisarob" },
+            { text: "nidala", disabled: true }
+          ]);
+        });
 
-      it("should display empty results item if it's defined & nothing was found", function() {
-        instance.config.templates.empty = "No matches found";
-        instance.results = [];
-        instance.showResults();
-        expect(instance.$results.text()).toBe("No matches found");
-      });
+        it("should call config.onItem($item)", function() {
+          spyOn(instance.config, "onItem");
 
-      it("shouldn't call selectResult() if disabled item is clicked", function() {
-        var $disabledItem = $(instance.config.templates.resultsItem).addClass("is-disabled");
-        spyOn(instance, "selectResult");
-        instance.$results.html($disabledItem);
-        $disabledItem.trigger("mousedown");
+          instance.showResults();
+          instance.changeIndex("down");
+          instance.changeIndex("down");
+          instance.selectResult();
 
-        expect(instance.selectResult).not.toHaveBeenCalled();
-      });
+          expect(instance.config.onItem).toHaveBeenCalledWith(instance.$items.eq(1));
+        });
 
-      it("should call onBeforeShow() if defined and pass $wrapper", function() {
-        spyOn(instance, "populateResults");
-        instance.config.onBeforeShow = jasmine.createSpy();
-        instance.showResults();
-        expect(instance.config.onBeforeShow).toHaveBeenCalledWith(instance.$wrapper);
+        it("should set 'selected' flag to true", function() {
+          instance.showResults();
+          instance.changeIndex("down");
+          instance.selectResult();
+
+          expect(instance.isResultSelected).toBe(true);
+        });
+
+        it("should do nothing if item is disabled", function() {
+          instance.showResults();
+          instance.itemIndex = 2;
+          instance.selectResult();
+
+          expect(instance.isResultSelected).toBe(false);
+        });
       });
 
       describe("with forceSelection enabled", function() {
@@ -154,20 +261,13 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
           instance.config.forceSelection = true;
         });
 
-        it("should call .changeIndex() when .showResults() is called", function() {
-          spyOn(instance, "changeIndex");
-          instance.showResults();
-
-          expect(instance.changeIndex).toHaveBeenCalled();
-        });
-
         it("should clear input value if 'esc' is pressed", function() {
           spyOn(instance.$el, "val");
           e = $.Event("keydown");
           e.keyCode = 27;
 
           instance.areResultsDisplayed = true;
-          instance.handleSpecialKey(e);
+          instance.processSpecialKey(e);
 
           expect(instance.$el.val).toHaveBeenCalledWith("");
         });
@@ -205,56 +305,57 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
         jasmine.clock().uninstall();
       });
 
-      it("should reset index when searching.", function() {
-        instance.search();
-        expect(instance.resultIndex).toEqual(-1);
-      });
-
-      it("should not fetch results if input is blank.", function() {
-        spyOn(instance, "search");
-        instance.config.threshold = 0;
-        instance.searchTerm = "o";
-        instance.handleTyping({ target: { value: "" } });
-        expect(instance.search).not.toHaveBeenCalled();
-      });
-
-      it("should not fetch results if input length is less than threshold.", function() {
-        spyOn(instance, "search");
-        instance.config.threshold = 2;
-        instance.searchTerm = "Oo";
-        instance.handleTyping({ target: { value: "O" } });
-        expect(instance.search).not.toHaveBeenCalled();
-      });
-
-      it("should add loadingClass & fetch results if searchTerm.length >= threshold and different from previous input value", function() {
-        instance.config.threshold = 2;
+      it("shouldn't call fetch() if input is blank", function() {
         spyOn(instance, "fetch");
-        spyOn(instance.$el, "val").and.returnValue("f");
-        instance.search();
-        expect(instance.$wrapper).toHaveClass(instance.classes.loading);
-        jasmine.clock().tick(instance.config.debounceTime + 1);
-        expect(instance.fetch).toHaveBeenCalled();
+        instance.config.threshold = 0;
+        instance.processTyping({ target: { value: "" } });
+
+        expect(instance.fetch).not.toHaveBeenCalled();
       });
 
-      it("should remove loadingClass when fetch is done", function() {
+      it("shouldn't call fetch() if input length is shorter than threshold.", function() {
+        spyOn(instance, "fetch");
+        instance.config.threshold = 2;
+        instance.processTyping({ target: { value: "Om" } });
+
+        expect(instance.fetch).not.toHaveBeenCalled();
+      });
+
+      it("should add 'loading' class & call config.fetch()", function() {
+        spyOn(instance.config, "fetch");
+        instance.processTyping({ target: { value: "Omega3" } });
+        jasmine.clock().tick(instance.config.debounceTime + 1);
+
+        expect(instance.$wrapper).toHaveClass(instance.classes.loading);
+        expect(instance.config.fetch).toHaveBeenCalled();
+      });
+
+      it("should remove 'loading' class when fetch is done", function() {
         instance.handleFetchDone([]);
         expect(instance.$wrapper).not.toHaveClass("is-loading");
       });
 
-      it("should clear results if the input is empty.", function() {
-        spyOn(instance, "clearResults");
-        instance.searchTerm = "s";
-        instance.handleTyping({ target: { value: "" }});
-        expect(instance.clearResults).toHaveBeenCalled();
+      it("should call populateResults(results), where results are trimmed to config.limit", function() {
+        spyOn(instance, "populateResults");
+        instance.config.limit = 1;
+        instance.handleFetchDone([ { text: "bruh" }, { text: "sup" }]);
+
+        expect(instance.populateResults).toHaveBeenCalledWith([ { text: "bruh" } ]);
       });
 
-      it("should call search() on input focus if value is available", function() {
-        spyOn(instance, "search");
-        instance.$el.focus();
-        expect(instance.search).not.toHaveBeenCalled()
-        instance.$el.val("foo");
-        instance.$el.focus();
-        expect(instance.search).toHaveBeenCalled()
+      it("should call showResults()", function() {
+        spyOn(instance, "showResults");
+        instance.handleFetchDone([ { text: "bruh" } ]);
+
+        expect(instance.showResults).toHaveBeenCalled();
+      });
+
+      it("should call clearResults() if $list is empty.", function() {
+        spyOn(instance, "clearResults");
+        instance.config.templates.empty = null;
+        instance.handleFetchDone([]);
+
+        expect(instance.clearResults).toHaveBeenCalled();
       });
 
       describe("Arrows", function() {
@@ -265,15 +366,27 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
           spyOn(instance, "changeIndex").and.returnValue(true);
 
           e = $.Event("keypress");
-          instance.results = [ "a", "b", "c" ];
-          instance.areResultsDisplayed = true;
+          instance.handleFetchDone([ { text: "a" }, { text: "b" }, { text: "c" } ]);
         });
 
-        it("calls .highlightResult() on up/down keypress", function() {
+        it("calls highlightResult() on up/down arrows", function() {
           e.keyCode = 38;
-          instance.handleSpecialKey(e);
+          instance.processSpecialKey(e);
           e.keyCode = 40;
-          instance.handleSpecialKey(e);
+          instance.processSpecialKey(e);
+
+          expect(instance.highlightResult).toHaveBeenCalled();
+          expect(instance.highlightResult.calls.count()).toEqual(2);
+        });
+
+        it("calls highlightResult() on right/left arrows", function() {
+          instance.config.useHorizontalNavKeys = true;
+          instance.itemIndex = 0;
+
+          e.keyCode = 37;
+          instance.processSpecialKey(e);
+          e.keyCode = 39;
+          instance.processSpecialKey(e);
 
           expect(instance.highlightResult).toHaveBeenCalled();
           expect(instance.highlightResult.calls.count()).toEqual(2);
@@ -281,21 +394,6 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
 
       });
 
-      describe("with forceSelection enabled", function() {
-
-        it("should restore input value if user changes it and blurs input before selection", function() {
-          spyOn(instance.$el, "val");
-          e = $.Event("blur");
-          e.target = { value: "foo" };
-          instance.config.forceSelection = true;
-          instance.searchTerm = "foom";
-          instance.isResultSelected = true;
-
-          instance.$el.trigger(e);
-          expect(instance.$el.val).toHaveBeenCalledWith("foom");
-        });
-
-      });
     });
 
     describe("Typing with triggerChar defined", function() {
@@ -307,9 +405,10 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
           el: "#js-autocomplete-test",
           threshold: 1,
           triggerChar: "@",
-          precedeWithSpace: false
         });
-        instance.searchTerm = "";
+
+        spyOn(instance, "search");
+
         e = $.Event("keyup");
         e.target = {
           value: "@ka @wa sa@ki @to\n@yo\n@ta",
@@ -321,37 +420,37 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
 
         it("is at index 0", function() {
           e.target.selectionStart = 3;
-          instance.$el.trigger(e);
+          instance.processTyping(e);
 
-          expect(instance.searchTerm).toEqual("@ka");
+          expect(instance.search).toHaveBeenCalledWith("@ka");
         });
 
         it("is surrounded with whitespace", function() {
           e.target.selectionStart = 7;
-          instance.$el.trigger(e);
+          instance.processTyping(e);
 
-          expect(instance.searchTerm).toEqual("@wa");
+          expect(instance.search).toHaveBeenCalledWith("@wa");
         });
 
         it("ends with newline", function() {
           e.target.selectionStart = 17;
-          instance.$el.trigger(e);
+          instance.processTyping(e);
 
-          expect(instance.searchTerm).toEqual("@to");
+          expect(instance.search).toHaveBeenCalledWith("@to");
         });
 
         it("is surrounded by newlines", function() {
           e.target.selectionStart = 21;
-          instance.$el.trigger(e);
+          instance.processTyping(e);
 
-          expect(instance.searchTerm).toEqual("@yo");
+          expect(instance.search).toHaveBeenCalledWith("@yo");
         });
 
         it("ends with eol", function() {
           e.target.selectionStart = e.target.value.length - 1;
-          instance.$el.trigger(e);
+          instance.processTyping(e);
 
-          expect(instance.searchTerm).toEqual("@ta");
+          expect(instance.search).toHaveBeenCalledWith("@ta");
         });
       });
 
@@ -366,67 +465,49 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
       });
     });
 
-    describe("Rendering results", function() {
-
-      it("should return properly rendered item element.", function() {
-        instance.results = [ { text: "Ben" } ];
-        instance.processTemplate();
-        expect(instance.$items[0].outerHTML.replace(/\"/g, "\'"))
-          .toEqual("<div class='autocomplete__list__item' data-value='Ben'><strong>Ben</strong></div>");
-      });
-
-      it("calling populateResults() should fill the list div.", function() {
-        instance.results = [ 1, 2, 3 ];
-        instance.populateResults();
-        expect(instance.$list).not.toBeEmpty();
-      });
-
-    });
-
-    describe("Navigating results", function() {
+    describe("Navigating", function() {
 
       beforeEach(function() {
-        instance.results = data;
-        instance.processTemplate();
+        instance.populateResults(data);
       });
 
       it("should be able to move up at index 0 & jump to last item.", function() {
-        instance.resultIndex = 0;
+        instance.itemIndex = 0;
         instance.changeIndex("up");
 
-        expect(instance.resultIndex).toEqual(2);
+        expect(instance.itemIndex).toEqual(2);
       });
 
       it("should be able to move down at last index & jump to first item.", function() {
-        instance.resultIndex = 2;
+        instance.itemIndex = 2;
         instance.changeIndex("down");
 
-        expect(instance.resultIndex).toEqual(0);
+        expect(instance.itemIndex).toEqual(0);
       });
 
       it("should move down if not at last item.", function() {
-        instance.resultIndex = 1;
+        instance.itemIndex = 1;
         instance.changeIndex("down");
 
-        expect(instance.resultIndex).toEqual(2);
+        expect(instance.itemIndex).toEqual(2);
       });
 
       it("should move up if not at first item.", function() {
-        instance.resultIndex = 1;
+        instance.itemIndex = 1;
         instance.changeIndex("up");
 
-        expect(instance.resultIndex).toEqual(0);
+        expect(instance.itemIndex).toEqual(0);
       });
 
       it("should return true if changed.", function() {
-        instance.resultIndex = 1;
+        instance.itemIndex = 1;
 
         expect(instance.changeIndex("up")).toBeTruthy();
       });
 
       it("should return false if not changed.", function() {
-        instance.results = [ "a" ];
-        instance.resultIndex = 0;
+        instance.populateResults([ "a" ]);
+        instance.itemIndex = 0;
 
         expect(instance.changeIndex("up")).toBeFalsy();
       });
@@ -434,18 +515,17 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
       describe("when one result is disabled", function() {
 
         beforeEach(function() {
-          instance.results[0].disabled = true;
-          instance.processTemplate();
+          instance.$items.eq(0).addClass(instance.classes.disabled);
         });
 
         it("skips 2 items", function() {
-          instance.resultIndex = -1;
+          instance.itemIndex = -1;
 
           instance.changeIndex("down");
-          expect(instance.resultIndex).toEqual(1);
+          expect(instance.itemIndex).toEqual(1);
 
           instance.changeIndex("up");
-          expect(instance.resultIndex).toEqual(2);
+          expect(instance.itemIndex).toEqual(2);
         });
 
       });
@@ -453,15 +533,14 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
       describe("when all results are disabled", function() {
 
         beforeEach(function() {
-          for (var i = 0; i < instance.results.length; i++) {
-            instance.results[i].disabled = true;
+          for (var i = 0; i < instance.$items.length; i++) {
+            instance.$items.eq(i).addClass(instance.classes.disabled);
           }
-          instance.processTemplate();
         });
 
         it("returns false", function() {
-          expect(instance.changeIndex("down")).toBeFalsy();
-          expect(instance.changeIndex("up")).toBeFalsy();
+          expect(instance.changeIndex("down")).toBe(false);
+          expect(instance.changeIndex("up")).toBe(false);
         });
 
       });
