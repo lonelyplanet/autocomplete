@@ -186,8 +186,11 @@ define([ "jquery" ], function($) {
     this.hasTouchmoved = true;
   };
 
-  Autocomplete.prototype.handleFetchDone = function(data) {
-    if (!!data && data.constructor === Array) {
+  Autocomplete.prototype.handleFetchDone = function(data, timestamp) {
+    if (
+      !!data && data.constructor === Array &&
+      this.lastFetchedAt === timestamp
+    ) {
       var limit = this.config.limit,
           results = limit > 0 ? data.slice(0, limit) : data;
 
@@ -238,6 +241,9 @@ define([ "jquery" ], function($) {
           keyName = keyName === "tab" ? "down" : keyName;
           hasItemIndexChanged = this.changeIndex(keyName);
           event.preventDefault();
+        } else {
+          this.shouldProcessTyping = false;
+          this.hideResults();
         }
         break;
       }
@@ -248,15 +254,20 @@ define([ "jquery" ], function($) {
             keyName == "left" ? "up" : "down"
           );
           event.preventDefault();
+        } else {
+          this.shouldProcessTyping = false;
+          this.hideResults();
         }
         break;
       }
       case "enter": {
         if (isNavigating) {
           this.selectResult();
-          this.hideResults();
           event.preventDefault();
+        } else {
+          this.shouldProcessTyping = false;
         }
+        this.hideResults();
         break;
       }
       case "esc": {
@@ -277,7 +288,11 @@ define([ "jquery" ], function($) {
   };
 
   Autocomplete.prototype.showResults = function() {
-    if (this.areResultsDisplayed) return;
+    if (
+      this.areResultsDisplayed ||
+      !this.$el.is(":focus") ||
+      !this.$items.length
+    ) return;
 
     this.resetHighlightedResult();
 
@@ -438,9 +453,15 @@ define([ "jquery" ], function($) {
       if (this.searchTerm != searchTerm) {
         this.searchTerm = searchTerm;
         this.isResultSelected = false;
-
         this.$wrapper.addClass(this.classes.loading);
-        this.config.fetch(this.searchTerm, this.handleFetchDone);
+
+        var now = Date.now(),
+            boundHandleFetchDone = function(data) {
+              this.handleFetchDone(data, now);
+            }.bind(this);
+
+        this.config.fetch(this.searchTerm, boundHandleFetchDone);
+        this.lastFetchedAt = now;
       } else if (this.$items.length) {
         this.showResults();
       }
