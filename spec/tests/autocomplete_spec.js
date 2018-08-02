@@ -110,6 +110,8 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
 
         beforeEach(function() {
           spyOn(instance, "resetHighlightedResult").and.callThrough();
+          spyOn(instance.$el, "is").and.returnValue(true);
+          spyOn(instance.$items, "length").and.returnValue(3);
         });
 
         it("should early return if results are already displayed", function() {
@@ -364,9 +366,12 @@ define([ "jquery", "autocomplete" ], function($, Autocomplete) {
         beforeEach(function() {
           spyOn(instance, "highlightResult");
           spyOn(instance, "changeIndex").and.returnValue(true);
+          spyOn(instance.$el, "is").and.returnValue(true);
 
           e = $.Event("keypress");
-          instance.handleFetchDone([ { text: "a" }, { text: "b" }, { text: "c" } ]);
+          instance.lastFetchedAt = 123;
+
+          instance.handleFetchDone([ { text: "a" }, { text: "b" }, { text: "c" } ], 123);
         });
 
         it("calls highlightResult() on up/down arrows", function() {
