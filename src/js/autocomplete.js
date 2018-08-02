@@ -460,8 +460,8 @@ define([ "jquery" ], function($) {
               this.handleFetchDone(data, now);
             }.bind(this);
 
-        this.config.fetch(this.searchTerm, boundHandleFetchDone);
         this.lastFetchedAt = now;
+        this.config.fetch(this.searchTerm, boundHandleFetchDone);
       } else if (this.$items.length) {
         this.showResults();
       }
